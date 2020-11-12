@@ -2,9 +2,11 @@ package com.example.digitalbiomarkers;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.annotation.SuppressLint;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
 
 import com.aware.Aware;
@@ -14,6 +16,7 @@ import com.aware.providers.Screen_Provider;
 
 public class MainActivity extends AppCompatActivity {
     private int screenTime = 0;
+    private int numUnlocks = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -21,28 +24,35 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Aware.startAWARE(this);
         Aware.setSetting(this, Aware_Preferences.STATUS_SCREEN,true);
+//        TextView sTime = (TextView)findViewById(R.id.sampleText);
+//        sTime.setText(Integer.toString(screenTime) + "mins");
 
-        String URL = "content://com.aware.provider.screen/screen";
-        Uri stats = Uri.parse(URL);
-        String[] tableValues =
-                {
-                        Screen_Provider.Screen_Data._ID,
-                        Screen_Provider.Screen_Data.TIMESTAMP,
-                        Screen_Provider.Screen_Data.SCREEN_STATUS
-                };
-        String mSelectionCluase = null;
-        String[] mSelectionArgs = null;
-        String sortOrder = null;
-        Cursor cursor = getContentResolver().query(stats,tableValues,mSelectionCluase,mSelectionArgs,sortOrder);
-        if (cursor != null){
-            cursor.moveToFirst();
+        TextView numUnlockTV = (TextView)findViewById(R.id.unlocksTextView);
+        Screen.setSensorObserver(new Screen.AWARESensorObserver() {
+            @Override
+            public void onScreenOn() {
 
-            for (int i = 0;i< cursor.getCount();i++){
-                screenTime += cursor.getInt(cursor.getColumnIndexOrThrow(Screen_Provider.Screen_Data.TIMESTAMP));
             }
-        }
-        TextView sTime = (TextView)findViewById(R.id.sampleText);
-        sTime.setText(Integer.toString(screenTime));
+
+            @Override
+            public void onScreenOff() {
+
+            }
+
+            @Override
+            public void onScreenLocked() {
+
+            }
+
+            @SuppressLint("WrongConstant")
+            @Override
+            public void onScreenUnlocked() {
+                numUnlocks++;
+                numUnlockTV.setText(Integer.toString(numUnlocks));
+            }
+        });
+
     }
 
 }
+
