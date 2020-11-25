@@ -2,7 +2,9 @@ package com.example.digitalbiomarkers;
 
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
@@ -18,6 +20,7 @@ import com.aware.Aware_Preferences;
 import com.aware.Communication;
 import com.aware.Screen;
 import com.aware.plugin.device_usage.Provider;
+import com.aware.providers.Applications_Provider;
 import com.aware.providers.Communication_Provider;
 import com.aware.providers.Keyboard_Provider;
 import com.aware.providers.Screen_Provider;
@@ -25,6 +28,10 @@ import com.ibm.cloud.sdk.core.security.IamAuthenticator;
 import com.ibm.watson.tone_analyzer.v3.ToneAnalyzer;
 import com.ibm.watson.tone_analyzer.v3.model.ToneAnalysis;
 import com.ibm.watson.tone_analyzer.v3.model.ToneOptions;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private long screenTime = 0;
@@ -48,75 +55,57 @@ public class MainActivity extends AppCompatActivity {
                 emotion.execute();
             }
         });
+
+        Button connectDb = (Button)findViewById(R.id.connectDB);
+        connectDb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ConnectDB cdb= new ConnectDB(getApplicationContext());
+                cdb.execute();
+
+            }
+        });
+
         Aware.startAWARE(this);
+//        Aware.joinStudy(this,"http://167.71.59.111:8080/index.php/1/4lph4num3ric");
+        Aware.joinStudy(this,"http://10.20.188.9:8080/index.php/1/digitalHealthF2020");
         Aware.setSetting(this, Aware_Preferences.STATUS_SCREEN,true);
         Aware.setSetting(this, Aware_Preferences.STATUS_KEYBOARD,true);
         Aware.setSetting(this,"status_plugin_device_usage",true);
+        Aware.startPlugin(this,"status_device_usage");
         Aware.setSetting(this,Aware_Preferences.STATUS_COMMUNICATION_EVENTS,true);
         Aware.setSetting(this,Aware_Preferences.STATUS_CALLS,true);
         Aware.setSetting(this,Aware_Preferences.STATUS_MESSAGES,true);
+        Aware.setSetting(this,Aware_Preferences.STATUS_APPLICATIONS,true);
 
         Applications.isAccessibilityServiceActive(getApplicationContext());
 
-        String[] tableValuesScreen =
-                {
-                        Screen_Provider.Screen_Data._ID,
-                        Screen_Provider.Screen_Data.TIMESTAMP,
-                        Screen_Provider.Screen_Data.DEVICE_ID,
-                        Screen_Provider.Screen_Data.SCREEN_STATUS
-                };
-        Cursor cursor = getContentResolver().query(Screen_Provider.Screen_Data.CONTENT_URI,null, null,null,null);
+        String selection = Keyboard_Provider.Keyboard_Data._ID + " IN (SELECT "
+                            + Keyboard_Provider.Keyboard_Data._ID +"- 1"+ " FROM "
+                            + "keyboard" + " WHERE "
+                            + Keyboard_Provider.Keyboard_Data.BEFORE_TEXT + "=?)";
+        String sel =  Keyboard_Provider.Keyboard_Data.BEFORE_TEXT + "=?";
+        String[] selectionargs = new String[]{""};
 
-//        String[] tableValuesKB =
-//                {
-//                        Keyboard_Provider.Keyboard_Data._ID,
-//                        Keyboard_Provider.Keyboard_Data.DEVICE_ID,
-//                        Keyboard_Provider.Keyboard_Data.BEFORE_TEXT,
-//                        Keyboard_Provider.Keyboard_Data.PACKAGE_NAME,
-//                        Keyboard_Provider.Keyboard_Data.CURRENT_TEXT
-//                };
-        Cursor keyboardCursor = getContentResolver().query(Keyboard_Provider.Keyboard_Data.CONTENT_URI,null, null,null,null);
-//
-        String[] tableValuesDU =
-                {
-                        Provider.DeviceUsage_Data._ID,
-                        Provider.DeviceUsage_Data.DEVICE_ID,
-                        Provider.DeviceUsage_Data.ELAPSED_DEVICE_ON,
-                        Provider.DeviceUsage_Data.ELAPSED_DEVICE_OFF
-                };
+        Cursor cursor = getContentResolver().query(Screen_Provider.Screen_Data.CONTENT_URI,null, null,null,null);
         Cursor deviceUsageCursor = getContentResolver().query(Provider.DeviceUsage_Data.CONTENT_URI,null, null,null,null);
-//
-//        String[] tableValuesComms =
-//                {
-//                        Communication_Provider.Calls_Data._ID,
-//                        Communication_Provider.Calls_Data.DEVICE_ID,
-//                        Communication_Provider.Calls_Data.DURATION,
-//                        Communication_Provider.Calls_Data.TIMESTAMP,
-//                        Communication_Provider.Calls_Data.TYPE,
-//                        Communication_Provider.Messages_Data.TYPE,
-//                        Communication_Provider.Messages_Data.TIMESTAMP
-//                };
         Cursor CommsCursor = getContentResolver().query(Communication_Provider.Calls_Data.CONTENT_URI,null,null,null,null);
-//
-//        if(deviceUsageCursor != null){
-//            deviceUsageCursor.moveToFirst();
-//            for (int i = 0; i < deviceUsageCursor.getCount(); i++) {
-//                Log.d("Message Data", deviceUsageCursor.getString(deviceUsageCursor.getColumnIndexOrThrow(Provider.DeviceUsage_Data.ELAPSED_DEVICE_ON)));
-//            }
-//        }
-//        int x = 0;
-//        deviceUsageCursor.moveToFirst();
-//        if (deviceUsageCursor != null) {
-//            do {
-//                x = deviceUsageCursor.getInt(deviceUsageCursor.getColumnIndex(Provider.DeviceUsage_Data._ID));
-//            } while (cursor.moveToNext());
-//            TextView sTime = (TextView) findViewById(R.id.sampleText);
-//            sTime.setText(Integer.toString(x));
-//        }
-//        else{
-//            TextView sTime = (TextView) findViewById(R.id.sampleText);
-//            sTime.setText("NULL");
-//        }
+        Cursor AppsCursor = getContentResolver().query(Applications_Provider.Applications_Foreground.CONTENT_URI,null,null,null,null);
+        Cursor keyboardCursor = getContentResolver().query(Keyboard_Provider.Keyboard_Data.CONTENT_URI,null, selection,selectionargs,null);
+        List<String> text = new ArrayList<String>();
+        TextView sTime = (TextView) findViewById(R.id.sampleText);
+
+        if (keyboardCursor!=null){
+            keyboardCursor.moveToFirst();
+            do{
+                text.add(keyboardCursor.getString(keyboardCursor.getColumnIndexOrThrow(Keyboard_Provider.Keyboard_Data.CURRENT_TEXT)));
+            }while(keyboardCursor.moveToNext());
+            sTime.setText(text.toString().replace("[","").replace("]",""));
+        }
+        else{
+            sTime.setText("NOT WORKING");
+        }
+
     }
 
 }

@@ -5,6 +5,11 @@ plugins {
 android {
     compileSdkVersion 30
     buildToolsVersion "30.0.2"
+    packagingOptions {
+
+        exclude 'META-INF/INDEX.LIST'
+        exclude 'META-INF/io.netty.versions.properties'
+    }
 
     defaultConfig {
         applicationId "com.example.digitalbiomarkers"
@@ -38,4 +43,5 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
     api "com.github.denzilferreira:aware-client:master-SNAPSHOT"
     compile 'com.ibm.watson:ibm-watson:8.6.3'
+    compile 'io.vertx:vertx-mysql-client:3.9.4'
 }
